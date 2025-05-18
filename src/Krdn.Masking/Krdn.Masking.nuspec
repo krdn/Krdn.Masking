@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>Krdn.Masking</id>
+    <version>1.0.0</version>
+    <title>Krdn.Masking</title>
+    <authors>KRDN</authors>
+    <owners>KRDN</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/krdn/Krdn.Masking</projectUrl>
+    <description>ASP.NET Core 애플리케이션을 위한 고성능 데이터 마스킹 라이브러리</description>
+    <releaseNotes>
+      - 초기 릴리스
+      - 이메일, 전화번호, 이름, 여권번호, 신용카드 번호 마스킹 지원
+      - 직접 함수 호출 및 속성(Attribute) 기반 마스킹 지원
+      - 성능 최적화(캐싱, 표현식 트리 사용)
+    </releaseNotes>
+    <copyright>Copyright 2025</copyright>
+    <tags>masking security privacy aspnetcore travel</tags>
+    <repository type="git" url="https://github.com/krdn/Krdn.Masking.git" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\netstandard2.0\Krdn.Masking.dll" target="lib\netstandard2.0\Krdn.Masking.dll" />
+    <file src="bin\Release\netstandard2.0\Krdn.Masking.xml" target="lib\netstandard2.0\Krdn.Masking.xml" />
+    <file src="bin\Release\netstandard2.0\Krdn.Masking.pdb" target="lib\netstandard2.0\Krdn.Masking.pdb" />
+    <file src="..\..\README.md" target="\" />
+  </files>
+</package>
