@@ -31,8 +31,12 @@ namespace Krdn.Masking.Services
         /// <param name="email">원본 이메일</param>
         /// <param name="visibleCharCount">표시할 문자 수</param>
         /// <returns>마스킹된 이메일</returns>
+        /// <exception cref="ArgumentOutOfRangeException">visibleCharCount가 음수인 경우</exception>
         public string MaskEmail(string email, int visibleCharCount = 2)
         {
+            if (visibleCharCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(visibleCharCount), "표시할 문자 수는 0 이상이어야 합니다.");
+                
             return _maskingProvider.MaskEmail(email, visibleCharCount);
         }
         
@@ -52,8 +56,12 @@ namespace Krdn.Masking.Services
         /// <param name="name">원본 이름</param>
         /// <param name="visibleCharCount">표시할 문자 수</param>
         /// <returns>마스킹된 이름</returns>
+        /// <exception cref="ArgumentOutOfRangeException">visibleCharCount가 음수인 경우</exception>
         public string MaskName(string name, int visibleCharCount = 1)
         {
+            if (visibleCharCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(visibleCharCount), "표시할 문자 수는 0 이상이어야 합니다.");
+                
             return _maskingProvider.MaskName(name, visibleCharCount);
         }
         

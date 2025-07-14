@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 namespace Krdn.Masking.Attributes
 {
@@ -43,18 +44,30 @@ namespace Krdn.Masking.Attributes
             if (string.IsNullOrEmpty(value))
                 return value;
 
-            var parts = value.Split('@');
-            if (parts.Length != 2)
-                return value;
+            try
+            {
+                var parts = value.Split('@');
+                if (parts.Length != 2)
+                    return value;
+                    
+                var name = parts[0];
+                var domain = parts[1];
                 
-            var name = parts[0];
-            var domain = parts[1];
-            
-            if (name.Length <= _visibleCharCount)
-                return value;
+                // 도메인이 비어있으면 원본 반환
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(domain))
+                    return value;
                 
-            var masked = name.Substring(0, _visibleCharCount) + new string('*', name.Length - _visibleCharCount);
-            return $"{masked}@{domain}";
+                if (name.Length <= _visibleCharCount)
+                    return value;
+                    
+                var masked = name.Substring(0, _visibleCharCount) + new string('*', name.Length - _visibleCharCount);
+                return $"{masked}@{domain}";
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 원본 값 반환
+                return value;
+            }
         }
         
         /// <inheritdoc/>
@@ -72,11 +85,27 @@ namespace Krdn.Masking.Attributes
             if (string.IsNullOrEmpty(value))
                 return value;
                 
-            // 한국 전화번호 형식 (010-1234-5678)
-            return System.Text.RegularExpressions.Regex.Replace(
-                value, 
-                @"(\d{3})-(\d{4})-(\d{4})", 
-                "$1-****-$3");
+            try
+            {
+                // 공백 제거 후 검증
+                var trimmedValue = value.Trim();
+                if (string.IsNullOrEmpty(trimmedValue))
+                    return value;
+                    
+                // 한국 전화번호 형식 (010-1234-5678)
+                var result = System.Text.RegularExpressions.Regex.Replace(
+                    trimmedValue, 
+                    @"(\d{3})-(\d{4})-(\d{4})", 
+                    "$1-****-$3");
+                    
+                // 패턴이 매치되지 않으면 원본 반환
+                return result == trimmedValue ? value : result;
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 원본 값 반환
+                return value;
+            }
         }
         
         /// <inheritdoc/>
@@ -102,10 +131,22 @@ namespace Krdn.Masking.Attributes
         /// <inheritdoc/>
         public override string Mask(string value)
         {
-            if (string.IsNullOrEmpty(value) || value.Length <= _visibleCharCount)
+            if (string.IsNullOrEmpty(value))
                 return value;
                 
-            return value.Substring(0, _visibleCharCount) + new string('*', value.Length - _visibleCharCount);
+            try
+            {
+                var trimmedValue = value.Trim();
+                if (string.IsNullOrEmpty(trimmedValue) || trimmedValue.Length <= _visibleCharCount)
+                    return value;
+                    
+                return trimmedValue.Substring(0, _visibleCharCount) + new string('*', trimmedValue.Length - _visibleCharCount);
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 원본 값 반환
+                return value;
+            }
         }
         
         /// <inheritdoc/>
@@ -123,19 +164,47 @@ namespace Krdn.Masking.Attributes
             if (string.IsNullOrEmpty(value))
                 return value;
                 
-            // 표준 신용카드 형식 (1234-5678-9012-3456 또는 1234567890123456)
-            var normalized = value.Replace("-", "");
-            
-            if (normalized.Length != 16)
+            try
+            {
+                var trimmedValue = value.Trim();
+                if (string.IsNullOrEmpty(trimmedValue))
+                    return value;
+                    
+                // 표준 신용카드 형식 (1234-5678-9012-3456 또는 1234567890123456)
+                var normalized = trimmedValue.Replace("-", "").Replace(" ", "");
+                
+                // 15자리(아멕스) 또는 16자리 카드 지원
+                if (normalized.Length != 15 && normalized.Length != 16)
+                    return value;
+                    
+                // 모든 문자가 숫자인지 확인
+                if (!normalized.All(char.IsDigit))
+                    return value;
+                
+                if (normalized.Length == 15) // 아멕스
+                {
+                    var formatted15 = string.Format("{0}-{1}-{2}-{3}", 
+                        normalized.Substring(0, 4),
+                        normalized.Substring(4, 6),
+                        "*****",
+                        normalized.Substring(11, 4));
+                    return formatted15;
+                }
+                else // 16자리
+                {
+                    var formatted16 = string.Format("{0}-{1}-{2}-{3}", 
+                        normalized.Substring(0, 4),
+                        normalized.Substring(4, 4),
+                        "****",
+                        normalized.Substring(12, 4));
+                    return formatted16;
+                }
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 원본 값 반환
                 return value;
-                
-            var formatted = string.Format("{0}-{1}-{2}-{3}", 
-                normalized.Substring(0, 4),
-                normalized.Substring(4, 4),
-                "****",
-                normalized.Substring(12, 4));
-                
-            return formatted;
+            }
         }
         
         /// <inheritdoc/>
@@ -153,11 +222,41 @@ namespace Krdn.Masking.Attributes
             if (string.IsNullOrEmpty(value))
                 return value;
                 
-            // 여권 번호 형식 (M12345678)
-            return System.Text.RegularExpressions.Regex.Replace(
-                value, 
-                @"^([A-Z]\d{1})(\d{6})(\d{1})$", 
-                "$1******$3");
+            try
+            {
+                var trimmedValue = value.Trim().ToUpper();
+                if (string.IsNullOrEmpty(trimmedValue))
+                    return value;
+                    
+                // 기본 여권 번호 형식 (M12345678) 우선 처리
+                var result = System.Text.RegularExpressions.Regex.Replace(
+                    trimmedValue, 
+                    @"^([A-Z]\d{1})(\d{6})(\d{1})$", 
+                    "$1******$3");
+                
+                // 기본 패턴이 매치되지 않으면 확장 패턴 시도
+                if (result == trimmedValue)
+                {
+                    result = System.Text.RegularExpressions.Regex.Replace(
+                        trimmedValue, 
+                        @"^([A-Z]{1,2}\d{1,2})(\d{4,6})(\d{1,2})$", 
+                        match => 
+                        {
+                            var prefix = match.Groups[1].Value;
+                            var middle = match.Groups[2].Value;
+                            var suffix = match.Groups[3].Value;
+                            return prefix + new string('*', middle.Length) + suffix;
+                        });
+                }
+                    
+                // 패턴이 매치되지 않으면 원본 반환
+                return result == trimmedValue ? value : result;
+            }
+            catch (Exception)
+            {
+                // 예외 발생 시 원본 값 반환
+                return value;
+            }
         }
         
         /// <inheritdoc/>

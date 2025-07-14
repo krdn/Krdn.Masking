@@ -87,34 +87,62 @@ namespace Krdn.Masking.Extensions
             if (obj == null)
                 return null;
                 
-            // 객체의 얕은 복사본 생성
-            T clone = obj.ShallowCopy();
-            
-            // 모든 마스킹 속성 가져오기
-            var maskingAttributes = AttributeCache.GetMaskingAttributes(typeof(T));
-            
-            // 각 마스킹 속성에 대해 마스킹 적용
-            foreach (var entry in maskingAttributes)
+            try
             {
-                var property = entry.Key;
-                var attribute = entry.Value;
+                // 객체의 얕은 복사본 생성
+                T clone = obj.ShallowCopy();
+                if (clone == null)
+                    return obj; // 복사 실패 시 원본 반환
                 
-                // 표현식 트리로 생성된 빠른 게터와 세터 가져오기
-                var getter = ExpressionBuilder.GetPropertyGetter(property);
-                var setter = ExpressionBuilder.GetPropertySetter(property);
+                // 모든 마스킹 속성 가져오기
+                var maskingAttributes = AttributeCache.GetMaskingAttributes(typeof(T));
+                if (maskingAttributes == null)
+                    return clone;
                 
-                // 속성 값 가져오기
-                var value = getter(clone) as string;
-                
-                if (!string.IsNullOrEmpty(value))
+                // 각 마스킹 속성에 대해 마스킹 적용
+                foreach (var entry in maskingAttributes)
                 {
-                    // 마스킹 적용 및 결과 설정
-                    var maskedValue = attribute.Mask(value);
-                    setter(clone, maskedValue);
+                    try
+                    {
+                        var property = entry.Key;
+                        var attribute = entry.Value;
+                        
+                        if (property == null || attribute == null)
+                            continue;
+                        
+                        // 표현식 트리로 생성된 빠른 게터와 세터 가져오기
+                        var getter = ExpressionBuilder.GetPropertyGetter(property);
+                        var setter = ExpressionBuilder.GetPropertySetter(property);
+                        
+                        if (getter == null || setter == null)
+                            continue;
+                        
+                        // 속성 값 가져오기
+                        var value = getter(clone) as string;
+                        
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            // 마스킹 적용 및 결과 설정
+                            var maskedValue = attribute.Mask(value);
+                            setter(clone, maskedValue);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // 개별 속성 마스킹 실패 시 로그 기록 후 계속
+                        System.Diagnostics.Debug.WriteLine($"속성 마스킹 오류: {ex.Message}");
+                        continue;
+                    }
                 }
+                
+                return clone;
             }
-            
-            return clone;
+            catch (Exception ex)
+            {
+                // 전체 마스킹 실패 시 원본 객체 반환
+                System.Diagnostics.Debug.WriteLine($"객체 마스킹 오류: {ex.Message}");
+                return obj;
+            }
         }
         
         /// <summary>
@@ -151,31 +179,58 @@ namespace Krdn.Masking.Extensions
         /// <typeparam name="T">객체 타입</typeparam>
         /// <param name="source">원본 객체</param>
         /// <returns>객체의 복사본</returns>
+        /// <exception cref="InvalidOperationException">복사에 실패한 경우</exception>
         private static T ShallowCopy<T>(this T source) where T : class
         {
-            // MemberwiseClone 메서드를 사용하여 복사
             if (source == null)
                 return null;
                 
-            // 새 인스턴스 생성을 위한 타입 정보
-            Type type = typeof(T);
-            
-            // 매개변수 없는 생성자로 새 인스턴스 생성
-            T target = (T)Activator.CreateInstance(type);
-            
-            // 모든 속성 복사
-            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                .Where(p => p.CanRead && p.CanWrite);
-                
-            foreach (var property in properties)
+            try
             {
-                // 원본에서 값 읽기
-                var value = property.GetValue(source);
-                // 대상에 값 쓰기
-                property.SetValue(target, value);
+                // 새 인스턴스 생성을 위한 타입 정보
+                Type type = typeof(T);
+                
+                // 매개변수 없는 생성자 확인
+                var constructor = type.GetConstructor(Type.EmptyTypes);
+                if (constructor == null)
+                {
+                    throw new InvalidOperationException($"타입 {type.Name}에 매개변수 없는 생성자가 없습니다.");
+                }
+                
+                // 새 인스턴스 생성
+                T target = (T)Activator.CreateInstance(type);
+                if (target == null)
+                {
+                    throw new InvalidOperationException($"타입 {type.Name}의 인스턴스 생성에 실패했습니다.");
+                }
+                
+                // 모든 속성 복사
+                var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(p => p.CanRead && p.CanWrite);
+                    
+                foreach (var property in properties)
+                {
+                    try
+                    {
+                        // 원본에서 값 읽기
+                        var value = property.GetValue(source);
+                        // 대상에 값 쓰기
+                        property.SetValue(target, value);
+                    }
+                    catch (Exception ex)
+                    {
+                        // 개별 속성 복사 실패 시 로그 기록 후 계속
+                        System.Diagnostics.Debug.WriteLine($"속성 {property.Name} 복사 오류: {ex.Message}");
+                        continue;
+                    }
+                }
+                
+                return target;
             }
-            
-            return target;
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"객체 복사 중 오류가 발생했습니다: {ex.Message}", ex);
+            }
         }
     }
 }

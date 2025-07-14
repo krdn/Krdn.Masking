@@ -12,7 +12,7 @@ namespace Krdn.Masking.Sample.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class TravelController : ControllerBase
+    public partial class TravelController : ControllerBase
     {
         private readonly ILogger<TravelController> _logger;
         private readonly MaskingService _maskingService;

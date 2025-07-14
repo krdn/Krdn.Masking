@@ -9,42 +9,54 @@ namespace Krdn.Masking.Services
     public class DefaultMaskingProvider : IMaskingProvider
     {
         /// <inheritdoc/>
-        public string MaskEmail(string email, int visibleCharCount = 2)
+        public virtual string MaskEmail(string email, int visibleCharCount = 2)
         {
             return new EmailMaskingAttribute(visibleCharCount).Mask(email);
         }
         
         /// <inheritdoc/>
-        public string MaskPhoneNumber(string phoneNumber)
+        public virtual string MaskPhoneNumber(string phoneNumber)
         {
             return new PhoneMaskingAttribute().Mask(phoneNumber);
         }
         
         /// <inheritdoc/>
-        public string MaskName(string name, int visibleCharCount = 1)
+        public virtual string MaskName(string name, int visibleCharCount = 1)
         {
             return new NameMaskingAttribute(visibleCharCount).Mask(name);
         }
         
         /// <inheritdoc/>
-        public string MaskCreditCard(string cardNumber)
+        public virtual string MaskCreditCard(string cardNumber)
         {
             return new CreditCardMaskingAttribute().Mask(cardNumber);
         }
         
         /// <inheritdoc/>
-        public string MaskPassport(string passportNumber)
+        public virtual string MaskPassport(string passportNumber)
         {
             return new PassportMaskingAttribute().Mask(passportNumber);
         }
         
         /// <inheritdoc/>
-        public string MaskWithAttribute(string value, MaskingAttribute attribute)
+        public virtual string MaskWithAttribute(string value, MaskingAttribute attribute)
         {
-            if (attribute == null || string.IsNullOrEmpty(value))
+            if (attribute == null)
+                throw new ArgumentNullException(nameof(attribute), "마스킹 속성이 null입니다.");
+                
+            if (string.IsNullOrEmpty(value))
                 return value;
                 
-            return attribute.Mask(value);
+            try
+            {
+                return attribute.Mask(value);
+            }
+            catch (Exception ex)
+            {
+                // 로그 기록 후 원본 값 반환
+                System.Diagnostics.Debug.WriteLine($"마스킹 오류: {ex.Message}");
+                return value;
+            }
         }
     }
 }

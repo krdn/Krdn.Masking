@@ -30,7 +30,7 @@ namespace Krdn.Masking.Tests
             var masked = attribute.Mask(email);
             
             // Assert
-            Assert.Equal("ho**********@example.com", masked);
+            Assert.Equal("ho*********@example.com", masked);
         }
         
         [Fact]

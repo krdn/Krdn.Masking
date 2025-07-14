@@ -29,25 +29,38 @@ namespace Krdn.Masking.Utils
                 
             return _getterCache.GetOrAdd(property, prop =>
             {
-                // GetMethod가 없는 경우(예: 읽기 전용 속성)
-                if (prop.GetMethod == null)
-                    return obj => null;
+                try
+                {
+                    // GetMethod가 없는 경우(예: 읽기 전용 속성)
+                    if (prop.GetMethod == null)
+                        return obj => null;
+                        
+                    // DeclaringType 검증
+                    if (prop.DeclaringType == null)
+                        return obj => null;
+                        
+                    // 파라미터: 속성 값을 가져올 개체 인스턴스
+                    var objParam = Expression.Parameter(typeof(object), "obj");
                     
-                // 파라미터: 속성 값을 가져올 개체 인스턴스
-                var objParam = Expression.Parameter(typeof(object), "obj");
-                
-                // 개체를 속성을 포함하는 타입으로 캐스팅
-                var typedObj = Expression.Convert(objParam, prop.DeclaringType);
-                
-                // 속성 값 가져오기
-                var propAccess = Expression.Property(typedObj, prop);
-                
-                // 속성 값을 object 타입으로 변환
-                var convertedProp = Expression.Convert(propAccess, typeof(object));
-                
-                // 람다 식 생성 및 컴파일
-                var lambda = Expression.Lambda<Func<object, object>>(convertedProp, objParam);
-                return lambda.Compile();
+                    // 개체를 속성을 포함하는 타입으로 캐스팅
+                    var typedObj = Expression.Convert(objParam, prop.DeclaringType);
+                    
+                    // 속성 값 가져오기
+                    var propAccess = Expression.Property(typedObj, prop);
+                    
+                    // 속성 값을 object 타입으로 변환
+                    var convertedProp = Expression.Convert(propAccess, typeof(object));
+                    
+                    // 람다 식 생성 및 컴파일
+                    var lambda = Expression.Lambda<Func<object, object>>(convertedProp, objParam);
+                    return lambda.Compile();
+                }
+                catch (Exception ex)
+                {
+                    // 예외 발생 시 널 반환 함수 제공
+                    System.Diagnostics.Debug.WriteLine($"게터 생성 오류: {ex.Message}");
+                    return obj => null;
+                }
             });
         }
         
@@ -63,26 +76,39 @@ namespace Krdn.Masking.Utils
                 
             return _setterCache.GetOrAdd(property, prop =>
             {
-                // SetMethod가 없는 경우(예: 읽기 전용 속성)
-                if (prop.SetMethod == null)
-                    return (obj, value) => { };
+                try
+                {
+                    // SetMethod가 없는 경우(예: 읽기 전용 속성)
+                    if (prop.SetMethod == null)
+                        return (obj, value) => { };
+                        
+                    // DeclaringType 검증
+                    if (prop.DeclaringType == null)
+                        return (obj, value) => { };
+                        
+                    // 파라미터: 속성을 설정할 개체와 새 값
+                    var objParam = Expression.Parameter(typeof(object), "obj");
+                    var valueParam = Expression.Parameter(typeof(object), "value");
                     
-                // 파라미터: 속성을 설정할 개체와 새 값
-                var objParam = Expression.Parameter(typeof(object), "obj");
-                var valueParam = Expression.Parameter(typeof(object), "value");
-                
-                // 개체를 속성을 포함하는 타입으로 캐스팅
-                var typedObj = Expression.Convert(objParam, prop.DeclaringType);
-                
-                // 값을 속성 타입으로 캐스팅
-                var typedValue = Expression.Convert(valueParam, prop.PropertyType);
-                
-                // 속성 설정
-                var propAssign = Expression.Call(typedObj, prop.SetMethod, typedValue);
-                
-                // 람다 식 생성 및 컴파일
-                var lambda = Expression.Lambda<Action<object, object>>(propAssign, objParam, valueParam);
-                return lambda.Compile();
+                    // 개체를 속성을 포함하는 타입으로 캐스팅
+                    var typedObj = Expression.Convert(objParam, prop.DeclaringType);
+                    
+                    // 값을 속성 타입으로 캐스팅
+                    var typedValue = Expression.Convert(valueParam, prop.PropertyType);
+                    
+                    // 속성 설정
+                    var propAssign = Expression.Call(typedObj, prop.SetMethod, typedValue);
+                    
+                    // 람다 식 생성 및 컴파일
+                    var lambda = Expression.Lambda<Action<object, object>>(propAssign, objParam, valueParam);
+                    return lambda.Compile();
+                }
+                catch (Exception ex)
+                {
+                    // 예외 발생 시 빈 액션 제공
+                    System.Diagnostics.Debug.WriteLine($"세터 생성 오류: {ex.Message}");
+                    return (obj, value) => { };
+                }
             });
         }
         
